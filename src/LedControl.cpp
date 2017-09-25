@@ -162,7 +162,11 @@ void LedControl::setColumn(int addr, int col, byte value) {
     if(col<0 || col>7) 
         return;
     for(int row=0;row<8;row++) {
-        val=value >> (7-row);
+        if (invert) {
+            val=value >> row;
+        } else {
+            val=value >> (7-row);
+        }
         val=val & 0x01;
         setLed(addr,row,col,val);
     }
@@ -280,4 +284,19 @@ void LedControl::shiftRight(bool rotate)
 byte *LedControl::getStatus(void)
 {
     return status;
+}
+
+/* shift a char in from the left */
+void LedControl::writeLeft(char c, int delaytime)
+{
+    if (c < 32) { return; }
+    c -= 32;
+    const byte *ch = CH + 7*c;
+    int w = ch[0];
+    int h = ch[1];
+    for (int i = 0; i<w; i++) {
+        setColumn(maxDevices-1, 7, ch[i+2]);
+        delay(delaytime);
+        shiftLeft(false); /* don't rotate off the left edge */
+    }
 }
