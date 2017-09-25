@@ -299,4 +299,5 @@ void LedControl::writeLeft(char c, int delaytime)
         delay(delaytime);
         shiftLeft(false); /* don't rotate off the left edge */
     }
+    shiftLeft(false); /* extra line between chars */
 }
