@@ -96,16 +96,25 @@ void LedControl::setIntensity(int addr, int intensity) {
         spiTransfer(addr, OP_INTENSITY,intensity);
 }
 
-void LedControl::clearDisplay(int addr) {
+void LedControl::refreshDisplay(int addr) {
     int offset;
 
     if(addr<0 || addr>=maxDevices)
         return;
     offset=addr*8;
     for(int i=0;i<8;i++) {
-        status[offset+i]=0;
         spiTransfer(addr, i+1,status[offset+i]);
     }
+}
+
+void LedControl::clearDisplay(int addr) {
+    int offset;
+
+    if(addr<0 || addr>=maxDevices)
+        return;
+    offset=addr*8;
+    memset(status+offset, 0, 8);
+    refreshDisplay(addr);
 }
 
 void LedControl::setLed(int addr, int row, int column, boolean state) {
@@ -117,7 +126,7 @@ void LedControl::setLed(int addr, int row, int column, boolean state) {
     if(row<0 || row>7 || column<0 || column>7)
         return;
     offset=addr*8;
-    val=B10000000 >> column;
+    val=1 << column;
     if(state)
         status[offset+row]=status[offset+row]|val;
     else {
@@ -208,4 +217,51 @@ void LedControl::spiTransfer(int addr, volatile byte opcode, volatile byte data)
     digitalWrite(SPI_CS,HIGH);
 }    
 
+void LedControl::shiftUppish(bool rotate, bool fill_zero)
+{
+    byte old = status[0];
+    int i;
+    for (i=0; i<64; i++) {
+        status[i]=status[i+1];
+    }
+    if (rotate) { status[maxDevices*8-1] = old; }
+    else if (fill_zero) { status[maxDevices*8-1] = 0; }
 
+    for (i=0; i<maxDevices; i++) {
+        refreshDisplay(i);
+    }
+}
+
+void LedControl::shiftRightish(bool rotate, bool fill_zero)
+{
+    for (int i=0; i<maxDevices*8; i++) {
+        bool b = status[i] & 0x1;
+        status[i] >>= 1;
+        if (rotate) { status[i] |= (b << 7); }
+    }
+
+    for (int i=0; i<maxDevices; i++) {
+        refreshDisplay(i);
+    }
+}
+
+void LedControl::shiftLeft(bool rotate, bool fill_zero)
+{
+    int end = maxDevices*8;
+    for (int i=0; i<end; i++) {
+        bool b = status[i] & 0x80;
+        status[i] <<= 1;
+        if (i+1 < end) {
+            status[i+1] |= (b ? 0x1 : 0x0);
+        } else if (rotate) { status[0] |= (b ? 0x1 : 0x0); }
+    }
+
+    for (int i=0; i<maxDevices; i++) {
+        refreshDisplay(i);
+    }
+}
+
+byte *LedControl::getStatus(void)
+{
+    return status;
+}

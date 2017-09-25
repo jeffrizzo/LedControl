@@ -27,7 +27,7 @@
 #ifndef LedControl_h
 #define LedControl_h
 
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
 
 #if (ARDUINO >= 100)
 #include <Arduino.h>
@@ -128,6 +128,12 @@ class LedControl {
          */
         void clearDisplay(int addr);
 
+        /*
+         * redraw the display; used after setting status array
+         *
+         */
+        void refreshDisplay(int addr);
+
         /* 
          * Set the status of a single Led.
          * Params :
@@ -182,6 +188,11 @@ class LedControl {
          * dp	sets the decimal point.
          */
         void setChar(int addr, int digit, char value, boolean dp);
+
+        void shiftUppish(bool rotate, bool fill_zero);
+        void shiftRightish(bool rotate, bool fill_zero);
+        void shiftLeft(bool rotate, bool fill_zero);
+        byte *getStatus(void);
 };
 
 #endif	//LedControl.h
