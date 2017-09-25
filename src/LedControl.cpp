@@ -43,13 +43,14 @@
 #define OP_SHUTDOWN    12
 #define OP_DISPLAYTEST 15
 
-LedControl::LedControl(int dataPin, int clkPin, int csPin, int numDevices) {
+LedControl::LedControl(int dataPin, int clkPin, int csPin, int numDevices, bool inv) {
     SPI_MOSI=dataPin;
     SPI_CLK=clkPin;
     SPI_CS=csPin;
     if(numDevices<=0 || numDevices>8 )
         numDevices=8;
     maxDevices=numDevices;
+    invert = inv;
     pinMode(SPI_MOSI,OUTPUT);
     pinMode(SPI_CLK,OUTPUT);
     pinMode(SPI_CS,OUTPUT);
@@ -126,6 +127,9 @@ void LedControl::setLed(int addr, int row, int column, boolean state) {
     if(row<0 || row>7 || column<0 || column>7)
         return;
     offset=addr*8;
+    if (invert) {
+        row = 7 - row;
+    }
     val=1 << column;
     if(state)
         status[offset+row]=status[offset+row]|val;
@@ -142,6 +146,9 @@ void LedControl::setRow(int addr, int row, byte value) {
         return;
     if(row<0 || row>7)
         return;
+    if (invert) {
+        row = 7 - row;
+    }
     offset=addr*8;
     status[offset+row]=value;
     spiTransfer(addr, row+1,status[offset+row]);
@@ -217,7 +224,7 @@ void LedControl::spiTransfer(int addr, volatile byte opcode, volatile byte data)
     digitalWrite(SPI_CS,HIGH);
 }    
 
-void LedControl::shiftUppish(bool rotate, bool fill_zero)
+void LedControl::shiftUppish(bool rotate)
 {
     byte old = status[0];
     int i;
@@ -225,37 +232,46 @@ void LedControl::shiftUppish(bool rotate, bool fill_zero)
         status[i]=status[i+1];
     }
     if (rotate) { status[maxDevices*8-1] = old; }
-    else if (fill_zero) { status[maxDevices*8-1] = 0; }
+    else { status[maxDevices*8-1] = 0; }
 
     for (i=0; i<maxDevices; i++) {
         refreshDisplay(i);
     }
 }
 
-void LedControl::shiftRightish(bool rotate, bool fill_zero)
+void LedControl::shiftLeft(bool rotate)
 {
+    bool carry[maxDevices*8];
+    memset(carry, 0, sizeof(carry));
     for (int i=0; i<maxDevices*8; i++) {
-        bool b = status[i] & 0x1;
+        carry[i] = status[i] & 0x1;
         status[i] >>= 1;
-        if (rotate) { status[i] |= (b << 7); }
     }
 
+    for (int i = 0; i<maxDevices*8; i++) {
+        if (i+8 < maxDevices*8 || rotate) {
+            status[i] |= (carry[(i+8) % (maxDevices*8)] << 7);
+        }
+    }
     for (int i=0; i<maxDevices; i++) {
         refreshDisplay(i);
     }
 }
 
-void LedControl::shiftLeft(bool rotate, bool fill_zero)
+void LedControl::shiftRight(bool rotate)
 {
+    bool carry[maxDevices*8];
     int end = maxDevices*8;
     for (int i=0; i<end; i++) {
-        bool b = status[i] & 0x80;
+        carry[i] = status[i] & 0x80;
         status[i] <<= 1;
-        if (i+1 < end) {
-            status[i+1] |= (b ? 0x1 : 0x0);
-        } else if (rotate) { status[0] |= (b ? 0x1 : 0x0); }
     }
 
+    for (int i=0; i<maxDevices*8; i++) {
+        if (i-8 >= 0 || rotate) {
+            status[i] |= (carry[(maxDevices*8+i-8) % (maxDevices*8)] & 0x1);
+        }
+    }
     for (int i=0; i<maxDevices; i++) {
         refreshDisplay(i);
     }

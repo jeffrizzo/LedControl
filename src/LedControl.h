@@ -76,6 +76,8 @@ class LedControl {
         /* The maximum number of devices we use */
         int maxDevices;
 
+        bool invert;
+
     public:
         /* 
          * Create a new controler 
@@ -85,7 +87,7 @@ class LedControl {
          * csPin		pin for selecting the device 
          * numDevices	maximum number of devices that can be controled
          */
-        LedControl(int dataPin, int clkPin, int csPin, int numDevices=1);
+        LedControl(int dataPin, int clkPin, int csPin, int numDevices=1, bool inv=false);
 
         /*
          * Gets the number of devices attached to this LedControl.
@@ -189,13 +191,10 @@ class LedControl {
          */
         void setChar(int addr, int digit, char value, boolean dp);
 
-        void shiftUppish(bool rotate, bool fill_zero);
-        void shiftRightish(bool rotate, bool fill_zero);
-        void shiftLeft(bool rotate, bool fill_zero);
+        void shiftUppish(bool rotate);
+        void shiftLeft(bool rotate);
+        void shiftRight(bool rotate);
         byte *getStatus(void);
 };
 
 #endif	//LedControl.h
-
-
-
